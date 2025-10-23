@@ -1,0 +1,47 @@
+You are an expert full-stack developer helping me build a web app called **CleanCity**, a community and environment issue-reporting platform. I’m a Computer Science student at the University of Zimbabwe training to become a software architect. I want to design this project with strong architectural principles for performance, modularity, and maintainability.
+
+---
+
+🏗️ **Project Goal**
+Build a meaningful, real-world MVP web application where users can report local community issues (like waste dumping, water leaks, and road problems), and admins can view and update their status.
+
+This app will be added to my CV, so make the structure professional, easy to extend, and clearly architected.
+
+---
+
+🧠 **Architectural Intent & Trade-offs**
+- Prioritize **performance** and **maintainability**.
+- **Basic authentication only** (no payments or sensitive data).
+- Use **high cohesion** and **low coupling** for easy maintenance.
+- Design a **modular monolith** (simple now, scalable later).
+- Separate backend modules: `AuthModule`, `ReportModule`, and `AdminModule`.
+- Keep folder structure and file naming consistent and clean.
+- Provide clear **code comments** explaining key architectural decisions.
+
+---
+
+⚙️ **Technical Stack**
+- **Frontend:** React + TailwindCSS (responsive and mobile-friendly)
+- **Backend:** Node.js + Express
+- **Database:** MongoDB (using Mongoose ODM)
+- **Authentication:** JWT (JSON Web Token)
+- **Image Storage:** Optional Cloudinary integration
+- **Environment:** Replit (should run end-to-end inside Replit)
+
+---
+
+🧩 **Core Features**
+1. **User Registration & Login**
+   - Basic signup and login using JWT.
+2. **Submit a Report**
+   - Fields: title, description, category (waste, water, road), location (text), optional image.
+3. **Admin Dashboard**
+   - View all reports and mark them as *pending*, *in progress*, or *resolved*.
+4. **Public Feed**
+   - Display a simple list or map of community reports and their status.
+5. **Responsive UI**
+   - Use TailwindCSS for a clean, modern design.
+
+---
+
+📂 **Recommended Folder Structure**
