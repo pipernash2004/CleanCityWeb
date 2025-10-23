@@ -1,12 +1,14 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Moon, Sun, Menu, X } from "lucide-react";
+import { Moon, Sun, Menu, X, LogOut } from "lucide-react";
 import { useTheme } from "./ThemeProvider";
+import { useAuth } from "@/contexts/AuthContext";
 import { useState } from "react";
 
 export default function Header() {
   const { theme, toggleTheme } = useTheme();
-  const [location] = useLocation();
+  const { user, logout, isAuthenticated, isAdmin } = useAuth();
+  const [location, navigate] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const isActive = (path: string) => location === path;
@@ -14,8 +16,15 @@ export default function Header() {
   const navLinks = [
     { path: "/", label: "Home" },
     { path: "/reports", label: "Reports" },
-    { path: "/submit", label: "Submit Report" },
+    ...(isAuthenticated ? [{ path: "/submit", label: "Submit Report" }] : []),
+    ...(isAdmin ? [{ path: "/admin", label: "Admin" }] : []),
   ];
+
+  const handleLogout = () => {
+    logout();
+    navigate("/");
+    setMobileMenuOpen(false);
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -52,14 +61,33 @@ export default function Header() {
             </Button>
 
             <div className="hidden md:flex items-center gap-2">
-              <Link href="/login">
-                <Button variant="ghost" data-testid="button-login">
-                  Login
-                </Button>
-              </Link>
-              <Link href="/register">
-                <Button data-testid="button-register">Sign Up</Button>
-              </Link>
+              {isAuthenticated ? (
+                <>
+                  <span className="text-sm text-muted-foreground">
+                    {user?.name}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    onClick={handleLogout}
+                    data-testid="button-logout"
+                    className="gap-2"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Logout
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Link href="/login">
+                    <Button variant="ghost" data-testid="button-login">
+                      Login
+                    </Button>
+                  </Link>
+                  <Link href="/register">
+                    <Button data-testid="button-register">Sign Up</Button>
+                  </Link>
+                </>
+              )}
             </div>
 
             <Button
@@ -88,16 +116,29 @@ export default function Header() {
                   </Button>
                 </Link>
               ))}
-              <Link href="/login">
-                <Button variant="ghost" className="w-full justify-start" onClick={() => setMobileMenuOpen(false)}>
-                  Login
+              {isAuthenticated ? (
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start gap-2"
+                  onClick={handleLogout}
+                >
+                  <LogOut className="h-4 w-4" />
+                  Logout ({user?.name})
                 </Button>
-              </Link>
-              <Link href="/register">
-                <Button className="w-full" onClick={() => setMobileMenuOpen(false)}>
-                  Sign Up
-                </Button>
-              </Link>
+              ) : (
+                <>
+                  <Link href="/login">
+                    <Button variant="ghost" className="w-full justify-start" onClick={() => setMobileMenuOpen(false)}>
+                      Login
+                    </Button>
+                  </Link>
+                  <Link href="/register">
+                    <Button className="w-full" onClick={() => setMobileMenuOpen(false)}>
+                      Sign Up
+                    </Button>
+                  </Link>
+                </>
+              )}
             </nav>
           </div>
         )}

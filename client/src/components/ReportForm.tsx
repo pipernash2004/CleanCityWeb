@@ -6,6 +6,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Upload, X } from "lucide-react";
+import { reportsAPI, uploadAPI } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { useLocation } from "wouter";
 
 type Category = "waste" | "water" | "road";
 
@@ -16,6 +20,10 @@ export default function ReportForm() {
   const [location, setLocation] = useState("");
   const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
+  const { isAuthenticated, loading: authLoading } = useAuth();
+  const [, navigate] = useLocation();
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -34,15 +42,69 @@ export default function ReportForm() {
     setImagePreview("");
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Report submitted:", { title, description, category, location, image });
-    setTitle("");
-    setDescription("");
-    setCategory("");
-    setLocation("");
-    setImage(null);
-    setImagePreview("");
+
+    // Wait for auth to load before checking
+    if (authLoading) {
+      return;
+    }
+
+    if (!isAuthenticated) {
+      toast({
+        title: "Authentication required",
+        description: "Please login to submit a report",
+        variant: "destructive",
+      });
+      navigate("/login");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      let imageUrl = "";
+
+      // Upload image if selected
+      if (image) {
+        const uploadResponse = await uploadAPI.uploadImage(image);
+        imageUrl = uploadResponse.data.imageUrl;
+      }
+
+      // Create report
+      await reportsAPI.create({
+        title,
+        description,
+        category: category as string,
+        location,
+        imageUrl,
+      });
+
+      toast({
+        title: "Report submitted successfully",
+        description: "Thank you for helping improve your community!",
+      });
+
+      // Reset form
+      setTitle("");
+      setDescription("");
+      setCategory("");
+      setLocation("");
+      setImage(null);
+      setImagePreview("");
+
+      // Navigate to reports page
+      navigate("/reports");
+    } catch (error: any) {
+      console.error("Error submitting report:", error);
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to submit report. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -129,6 +191,7 @@ export default function ReportForm() {
               <div className="flex flex-col items-center justify-center gap-2">
                 <Upload className="w-8 h-8 text-muted-foreground" />
                 <p className="text-sm text-muted-foreground">Click to upload image</p>
+                <p className="text-xs text-muted-foreground">Maximum size: 5MB</p>
               </div>
               <input
                 id="image"
@@ -142,8 +205,8 @@ export default function ReportForm() {
           )}
         </div>
 
-        <Button type="submit" className="w-full" size="lg" data-testid="button-submit">
-          Submit Report
+        <Button type="submit" className="w-full" size="lg" disabled={loading || authLoading} data-testid="button-submit">
+          {authLoading ? "Loading..." : loading ? "Submitting..." : "Submit Report"}
         </Button>
       </form>
     </Card>

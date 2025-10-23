@@ -1,88 +1,58 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ReportCard from "@/components/ReportCard";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search } from "lucide-react";
-import wasteImage from "@assets/generated_images/Waste_dumping_report_example_b439383d.png";
-import waterImage from "@assets/generated_images/Water_leak_report_example_b22dadea.png";
-import potholeImage from "@assets/generated_images/Road_pothole_report_example_80ba27ee.png";
+import { reportsAPI } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 
 type Category = "all" | "waste" | "water" | "road";
 type Status = "all" | "pending" | "in-progress" | "resolved";
+
+interface Report {
+  _id: string;
+  title: string;
+  description: string;
+  category: "waste" | "water" | "road";
+  status: "pending" | "in-progress" | "resolved";
+  location: string;
+  imageUrl?: string;
+  createdAt: string;
+}
 
 export default function Reports() {
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<Category>("all");
   const [statusFilter, setStatusFilter] = useState<Status>("all");
+  const [reports, setReports] = useState<Report[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
-  const allReports = [
-    {
-      id: "1",
-      title: "Illegal Waste Dumping on 5th Avenue",
-      description: "Large amounts of trash and plastic bags dumped on the street corner. This has been ongoing for several weeks and creating health hazards.",
-      category: "waste" as const,
-      status: "pending" as const,
-      location: "5th Avenue & Main Street, Harare",
-      imageUrl: wasteImage,
-      createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-    },
-    {
-      id: "2",
-      title: "Water Pipe Burst Near Community Center",
-      description: "Major water leak from broken pipe causing flooding on the road. Water is being wasted and the road is becoming damaged.",
-      category: "water" as const,
-      status: "in-progress" as const,
-      location: "Community Center Road, Bulawayo",
-      imageUrl: waterImage,
-      createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-    },
-    {
-      id: "3",
-      title: "Large Pothole on Highway Exit",
-      description: "Deep pothole causing vehicle damage and traffic delays. Multiple cars have reported tire damage.",
-      category: "road" as const,
-      status: "resolved" as const,
-      location: "Highway 2 Exit 12",
-      imageUrl: potholeImage,
-      createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
-    },
-    {
-      id: "4",
-      title: "Broken Street Light on Park Road",
-      description: "Street light has been non-functional for two months, creating safety concerns at night.",
-      category: "road" as const,
-      status: "pending" as const,
-      location: "Park Road, Harare",
-      createdAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000),
-    },
-    {
-      id: "5",
-      title: "Overflowing Garbage Bins",
-      description: "Public bins overflowing for over a week, attracting pests and creating unsanitary conditions.",
-      category: "waste" as const,
-      status: "in-progress" as const,
-      location: "Central Market, Bulawayo",
-      createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-    },
-    {
-      id: "6",
-      title: "Leaking Fire Hydrant",
-      description: "Fire hydrant continuously leaking water, wasting resources and creating slippery conditions.",
-      category: "water" as const,
-      status: "resolved" as const,
-      location: "Market Street, Harare",
-      createdAt: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000),
-    },
-  ];
+  useEffect(() => {
+    fetchReports();
+  }, [categoryFilter, statusFilter, searchQuery]);
 
-  const filteredReports = allReports.filter((report) => {
-    const matchesSearch = report.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      report.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      report.location.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = categoryFilter === "all" || report.category === categoryFilter;
-    const matchesStatus = statusFilter === "all" || report.status === statusFilter;
-    return matchesSearch && matchesCategory && matchesStatus;
-  });
+  const fetchReports = async () => {
+    setLoading(true);
+    try {
+      const params: any = {};
+      if (categoryFilter !== "all") params.category = categoryFilter;
+      if (statusFilter !== "all") params.status = statusFilter;
+      if (searchQuery) params.search = searchQuery;
+
+      const response = await reportsAPI.getAll(params);
+      setReports(response.data.reports);
+    } catch (error: any) {
+      console.error("Error fetching reports:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load reports. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen">
@@ -133,10 +103,24 @@ export default function Reports() {
           </Select>
         </div>
 
-        {filteredReports.length > 0 ? (
+        {loading ? (
+          <div className="text-center py-16">
+            <p className="text-muted-foreground">Loading reports...</p>
+          </div>
+        ) : reports.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredReports.map((report) => (
-              <ReportCard key={report.id} {...report} />
+            {reports.map((report) => (
+              <ReportCard
+                key={report._id}
+                id={report._id}
+                title={report.title}
+                description={report.description}
+                category={report.category}
+                status={report.status}
+                location={report.location}
+                imageUrl={report.imageUrl}
+                createdAt={new Date(report.createdAt)}
+              />
             ))}
           </div>
         ) : (

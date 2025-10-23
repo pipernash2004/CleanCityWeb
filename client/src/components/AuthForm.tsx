@@ -3,7 +3,9 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 
 interface AuthFormProps {
   mode: "login" | "register";
@@ -13,10 +15,40 @@ export default function AuthForm({ mode }: AuthFormProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [loading, setLoading] = useState(false);
+  const { login, register } = useAuth();
+  const [, navigate] = useLocation();
+  const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log(`${mode} submitted:`, { email, password, name });
+    setLoading(true);
+
+    try {
+      if (mode === "login") {
+        await login(email, password);
+        toast({
+          title: "Login successful",
+          description: "Welcome back!",
+        });
+        navigate("/");
+      } else {
+        await register(name, email, password);
+        toast({
+          title: "Registration successful",
+          description: "Your account has been created!",
+        });
+        navigate("/");
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || `${mode === "login" ? "Login" : "Registration"} failed`,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -71,12 +103,18 @@ export default function AuthForm({ mode }: AuthFormProps) {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                minLength={6}
                 data-testid="input-password"
               />
+              {mode === "register" && (
+                <p className="text-xs text-muted-foreground">
+                  Password must be at least 6 characters
+                </p>
+              )}
             </div>
 
-            <Button type="submit" className="w-full" data-testid="button-submit">
-              {mode === "login" ? "Sign In" : "Create Account"}
+            <Button type="submit" className="w-full" disabled={loading} data-testid="button-submit">
+              {loading ? "Processing..." : mode === "login" ? "Sign In" : "Create Account"}
             </Button>
           </form>
 
