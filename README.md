@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![CleanCity Logo](client/public/favicon.png)
+![CleanCity Logo](client/public/city_image.png)
 
 **A modern, full-stack web application for reporting and tracking community issues**
 
