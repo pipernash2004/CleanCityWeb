@@ -10,7 +10,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import authRoutes from "./routes/authRoutes";
 import reportRoutes from "./routes/reportRoutes";
-import uploadRoutes from "./routes/uploadRoutes";
+import uploadRoutes from "./routes/image_upload";
 import { errorHandler, notFound } from "./middleware/errorHandler";
 
 export async function registerRoutes(app: Express): Promise<Server> {

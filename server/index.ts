@@ -1,93 +1,68 @@
 import express, { type Request, Response, NextFunction } from "express";
+import mongoose from "mongoose";
 import cors from "cors";
+import dotenv from "dotenv";
+import { connectDatabase } from "./config/database";
+import { ctl, db,  showActiveDebuggers } from "./lib/logger";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import { connectDatabase } from "./config/database";
-import dotenv from "dotenv";
-
-// Load environment variables
-dotenv.config();
+import { tracer } from "./middleware/trace";
+;
+dotenv.config({ path: "server/.env" });
 
 const app = express();
 
-// Enable CORS for all origins in development
+// Middleware/////////////////////////////////////////////////////////////////////////////////////////////////////
 app.use(cors());
-
-declare module 'http' {
-  interface IncomingMessage {
-    rawBody: unknown
-  }
-}
 app.use(express.json({
   verify: (req, _res, buf) => {
-    req.rawBody = buf;
+    (req as any).rawBody = buf;
   }
 }));
 app.use(express.urlencoded({ extended: false }));
+app.use(tracer());
 
-app.use((req, res, next) => {
-  const start = Date.now();
-  const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
-  };
+// Start server
+async function startServer() {
+  try {
+    await connectDatabase();
 
-  res.on("finish", () => {
-    const duration = Date.now() - start;
-    if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-      }
-
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
-      }
-
-      log(logLine);
+    if (db.enabled) {
+      mongoose.set("debug", (collectionName: string, method: string, ...args: any[]) => {
+        db(`${collectionName}.${method}`, JSON.stringify(args));
+      });
     }
-  });
 
-  next();
-});
+    const server = await registerRoutes(app);
 
-(async () => {
-  // Connect to MongoDB
-  await connectDatabase();
-  
-  const server = await registerRoutes(app);
+    app.use((_req: Request, res: Response) => {
+      res.status(404).json({ message: "Route not found" });
+    });
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
+    app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
+      const reqId = (req as any).traceId || "unknown";
+      ctl(`[${reqId}] Error: ${err.message}`);
+      res.status(500).json({ error: err.message });
+    });
 
-    res.status(status).json({ message });
-    throw err;
-  });
+    if (app.get("env") === "development") {
+      await setupVite(app, server);
+    } else {
+      serveStatic(app);
+    }
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
+    const port = parseInt(process.env.PORT || "5000", 10);
+    showActiveDebuggers();
+    server.listen(port, () => {
+      console.log(`🚀 Server running on port ${port}`);
+    });
+
+  } catch (error) {
+    console.log("❌ Failed to start server:", error);
+    process.exit(1);
   }
+}
 
-  // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5000 if not specified.
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = parseInt(process.env.PORT || '5000', 10);
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
-    log(`serving on port ${port}`);
-  });
-})();
+startServer();

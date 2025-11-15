@@ -80,10 +80,15 @@ export const createReportValidation = [
     .notEmpty()
     .withMessage("Location is required"),
   body("imageUrl")
-    .optional()
-    .trim()
-    .isURL()
-    .withMessage("Image URL must be a valid URL"),
+  .optional()
+  .custom((value) => {
+    if (!value) return true;
+    // Accept absolute URL or relative path starting with /
+    const isAbsolute = /^(https?:)?\/\//i.test(value);
+    const isRelative = typeof value === "string" && value.startsWith("/");
+    if (isAbsolute || isRelative) return true;
+    throw new Error("imageUrl must be an absolute URL or a path starting with '/'");
+  })
 ];
 
 /**

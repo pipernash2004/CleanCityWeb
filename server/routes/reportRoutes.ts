@@ -15,6 +15,7 @@ import { Router } from "express";
 import * as reportController from "../controllers/reportController";
 import { createReportValidation, updateReportValidation, validate } from "../middleware/validation";
 import { protect, adminOnly } from "../middleware/auth";
+import imageUploader from "./image_upload";
 
 const router = Router();
 
@@ -26,6 +27,7 @@ router.get("/:id", reportController.getReportById);
 router.post("/", protect, createReportValidation, validate, reportController.createReport);
 router.get("/my/reports", protect, reportController.getMyReports);
 router.delete("/:id", protect, reportController.deleteReport);
+router.use("/image", imageUploader); // Image upload routes
 
 // Admin only routes
 router.put("/:id", protect, adminOnly, updateReportValidation, validate, reportController.updateReport);

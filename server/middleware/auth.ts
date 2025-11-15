@@ -36,7 +36,7 @@ export function protect(req: Request, res: Response, next: NextFunction): void {
     // Verify token
     const decoded = jwt.verify(token, jwtConfig.secret) as JWTPayload;
 
-    // Attach user info to request
+    // Attach user info to request that you don't know it's structure 
     (req as any).user = decoded;
 
     next();

@@ -18,38 +18,57 @@ export default function ReportForm() {
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState<Category | "">("");
   const [location, setLocation] = useState("");
-  const [image, setImage] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string>("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>(""); // local preview
+  const [uploadedImageUrl, setUploadedImageUrl] = useState<string>(""); // URL from backend
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
   const { isAuthenticated, loading: authLoading } = useAuth();
   const [, navigate] = useLocation();
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      setImage(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
+    if (!file) return;
+
+    setImageFile(file);
+    setUploadedImageUrl(""); // reset backend URL if reselecting
+
+    const reader = new FileReader();
+    reader.onloadend = () => setImagePreview(reader.result as string);
+    reader.readAsDataURL(file);
   };
 
   const removeImage = () => {
-    setImage(null);
+    setImageFile(null);
     setImagePreview("");
+    setUploadedImageUrl("");
+  };
+
+  const uploadImage = async (): Promise<string> => {
+    if (!imageFile) return "";
+    try {
+      setUploading(true);
+      const response = await uploadAPI.uploadImage(imageFile);
+      setUploadedImageUrl(response.data.imageUrl);
+      return response.data.imageUrl;
+    } catch (err: any) {
+      console.error("Image upload failed:", err);
+      toast({
+        title: "Upload failed",
+        description: err.response?.data?.message || "Failed to upload image",
+        variant: "destructive",
+      });
+      return "";
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Wait for auth to load before checking
-    if (authLoading) {
-      return;
-    }
-
+    if (authLoading) return;
     if (!isAuthenticated) {
       toast({
         title: "Authentication required",
@@ -63,15 +82,17 @@ export default function ReportForm() {
     setLoading(true);
 
     try {
-      let imageUrl = "";
-
-      // Upload image if selected
-      if (image) {
-        const uploadResponse = await uploadAPI.uploadImage(image);
-        imageUrl = uploadResponse.data.imageUrl;
+      // Step 1: Upload image if needed
+      let imageUrl = uploadedImageUrl;
+      if (imageFile && !imageUrl) {
+        imageUrl = await uploadImage();
+        if (!imageUrl) {
+          setLoading(false);
+          return; // stop submission if upload failed
+        }
       }
 
-      // Create report
+      // Step 2: Submit report
       await reportsAPI.create({
         title,
         description,
@@ -90,16 +111,16 @@ export default function ReportForm() {
       setDescription("");
       setCategory("");
       setLocation("");
-      setImage(null);
+      setImageFile(null);
       setImagePreview("");
+      setUploadedImageUrl("");
 
-      // Navigate to reports page
       navigate("/reports");
-    } catch (error: any) {
-      console.error("Error submitting report:", error);
+    } catch (err: any) {
+      console.error("Error submitting report:", err);
       toast({
-        title: "Error",
-        description: error.response?.data?.message || "Failed to submit report. Please try again.",
+        title: "Submission failed",
+        description: err.response?.data?.message || "Failed to submit report",
         variant: "destructive",
       });
     } finally {
@@ -110,6 +131,7 @@ export default function ReportForm() {
   return (
     <Card className="p-6 md:p-8">
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Title */}
         <div className="space-y-2">
           <Label htmlFor="title">Report Title *</Label>
           <Input
@@ -118,10 +140,10 @@ export default function ReportForm() {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             required
-            data-testid="input-title"
           />
         </div>
 
+        {/* Description */}
         <div className="space-y-2">
           <Label htmlFor="description">Description *</Label>
           <Textarea
@@ -131,21 +153,21 @@ export default function ReportForm() {
             onChange={(e) => setDescription(e.target.value)}
             required
             className="min-h-32"
-            data-testid="input-description"
           />
         </div>
 
+        {/* Category & Location */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
             <Label htmlFor="category">Category *</Label>
             <Select value={category} onValueChange={(value) => setCategory(value as Category)} required>
-              <SelectTrigger id="category" data-testid="select-category">
+              <SelectTrigger id="category">
                 <SelectValue placeholder="Select a category" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="waste">Waste Management</SelectItem>
-                <SelectItem value="water">Water/Plumbing</SelectItem>
-                <SelectItem value="road">Road/Infrastructure</SelectItem>
+                <SelectItem value="waste">waste</SelectItem>
+                <SelectItem value="water">water</SelectItem>
+                <SelectItem value="road">road</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -158,17 +180,17 @@ export default function ReportForm() {
               value={location}
               onChange={(e) => setLocation(e.target.value)}
               required
-              data-testid="input-location"
             />
           </div>
         </div>
 
+        {/* Image Upload */}
         <div className="space-y-2">
           <Label>Photo (Optional)</Label>
-          {imagePreview ? (
+          {imagePreview || uploadedImageUrl ? (
             <div className="relative">
               <img
-                src={imagePreview}
+                src={uploadedImageUrl || imagePreview}
                 alt="Preview"
                 className="w-full h-48 object-cover rounded-lg"
               />
@@ -178,10 +200,14 @@ export default function ReportForm() {
                 size="icon"
                 className="absolute top-2 right-2"
                 onClick={removeImage}
-                data-testid="button-remove-image"
               >
                 <X className="w-4 h-4" />
               </Button>
+              {uploading && (
+                <div className="absolute inset-0 bg-black/30 flex items-center justify-center text-white font-bold">
+                  Uploading...
+                </div>
+              )}
             </div>
           ) : (
             <label
@@ -199,13 +225,13 @@ export default function ReportForm() {
                 className="hidden"
                 accept="image/*"
                 onChange={handleImageChange}
-                data-testid="input-image"
               />
             </label>
           )}
         </div>
 
-        <Button type="submit" className="w-full" size="lg" disabled={loading || authLoading} data-testid="button-submit">
+        {/* Submit */}
+        <Button type="submit" className="w-full" size="lg" disabled={loading || authLoading}>
           {authLoading ? "Loading..." : loading ? "Submitting..." : "Submit Report"}
         </Button>
       </form>
