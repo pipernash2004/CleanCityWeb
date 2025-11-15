@@ -145,16 +145,9 @@ Communities often struggle with:
 
 ---
 
-## 🚀 Getting Started on Replit
+## 🚀 Getting Started 
 
-### Prerequisites
-- Replit account (free)
-- Basic understanding of JavaScript/TypeScript
-
-### Installation
-
-1. **Fork/Clone this Repl**
-   - Click "Fork" in Replit to create your own copy
+py
 
 2. **Install Dependencies**
    ```bash
@@ -170,14 +163,7 @@ Communities often struggle with:
    - Regular user: `john@example.com` / `password123`
    - 6 sample reports with various statuses
 
-4. **Start the Application**
-   - Click the "Run" button in Replit, or run:
-   ```bash
-   npm run dev
-   ```
 
-5. **Access the Application**
-   - Open the URL provided by Replit (usually `https://<your-repl-name>.<your-username>.repl.co`)
 
 ### Environment Variables
 
@@ -236,17 +222,22 @@ cleancity/
 │   ├── controllers/            # Business logic layer
 │   │   ├── authController.ts  # Authentication logic
 │   │   └── reportController.ts # Report CRUD logic
+|   |____lib/
+|   |    |---logger.ts           # Core namespaces by system concern to track what is happening in my system 
+|   |
 │   ├── middleware/             # Express middleware
 │   │   ├── auth.ts            # JWT verification
 │   │   ├── errorHandler.ts    # Centralized error handling
-│   │   └── validation.ts      # Input validation
+│   │   └── validation.ts       # Input validation
+|   |   |---trace.ts           # tracking of request and response for easy debugging
+|   |   |---upload.ts          # for handling the uploading of images putting rules what type of imaged should be uploaded 
 │   ├── models/                 # Mongoose data models
 │   │   ├── User.ts            # User schema & model
 │   │   └── Report.ts          # Report schema & model
 │   ├── routes/                 # Route definitions
 │   │   ├── authRoutes.ts      # /api/auth routes
 │   │   ├── reportRoutes.ts    # /api/reports routes
-│   │   └── uploadRoutes.ts    # /api/upload route
+│   │   └── image_upload.ts    # /api/upload route
 │   ├── scripts/               # Utility scripts
 │   │   └── seed.ts            # Database seeding
 │   ├── index.ts               # Server entry point
@@ -434,17 +425,13 @@ cleancity/
 
 ---
 
-## 📝 License
-
-This project is open source and available under the [MIT License](LICENSE).
-
 ---
 
 ## 👨‍💻 Developer
 
 **Developed by**: Computer Science Student, University of Zimbabwe
 
-**Purpose**: Software Architecture Portfolio Project
+**Purpose**: Software Architecture Project
 
 **Focus Areas**: 
 - Clean code architecture
@@ -457,7 +444,7 @@ This project is open source and available under the [MIT License](LICENSE).
 
 ## 🤝 Contributing
 
-While this is primarily a portfolio project, contributions, issues, and feature requests are welcome!
+While this is primarily a project, contributions, issues, and feature requests are welcome!
 
 1. Fork the repository
 2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
@@ -471,7 +458,7 @@ While this is primarily a portfolio project, contributions, issues, and feature 
 
 For questions, feedback, or collaboration opportunities, please reach out through:
 - GitHub Issues
-- Replit Comments
+
 
 ---
 
@@ -479,6 +466,6 @@ For questions, feedback, or collaboration opportunities, please reach out throug
 
 **Built with ❤️ for cleaner communities in Zimbabwe**
 
-[View Demo](https://your-repl-url.repl.co) • [Report Bug](https://github.com/your-repo/issues) • [Request Feature](https://github.com/your-repo/issues)
+• [Report Bug](https://github.com/your-repo/issues) • [Request Feature](https://github.com/your-repo/issues)
 
 </div>
